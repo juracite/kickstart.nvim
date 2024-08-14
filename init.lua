@@ -107,6 +107,69 @@ vim.opt.number = true
 -- Enable mouse mode, can be useful for resizing splits for example!
 vim.opt.mouse = 'a'
 
+vim.opt.termguicolors = true
+
+vim.opt.shell = '/bin/bash'
+
+vim.opt.shellcmdflag = '-c'
+vim.opt.shellquote = ''
+vim.opt.shellxquote = ''
+
+vim.cmd [[
+function! NpmTestWithColors()
+    let cmd = 'npm run test'
+    belowright new
+    call termopen(cmd)
+    setlocal nonumber norelativenumber
+    startinsert
+endfunction
+
+command! NpmTestWithColors call NpmTestWithColors()
+]]
+
+vim.cmd [[
+augroup TerminalColors
+    autocmd!
+    autocmd TermOpen * setlocal winhighlight=Normal:Normal
+augroup END
+]]
+
+local function term_open(cmd, use_absolute_path)
+  local file_path
+  if use_absolute_path then
+    file_path = vim.fn.expand '%:p'
+  else
+    file_path = vim.fn.expand '%:.'
+  end
+  cmd = cmd:gsub('${filepath}', file_path)
+
+  vim.cmd 'belowright new'
+  vim.fn.termopen(cmd)
+  vim.wo.number = false
+  vim.wo.relativenumber = false
+  vim.cmd 'startinsert'
+end
+
+vim.api.nvim_create_user_command('TermOpen', function(opts)
+  local args = opts.fargs
+  local use_absolute_path = false
+
+  if args[1] == '--abs' then
+    use_absolute_path = true
+    table.remove(args, 1)
+  end
+
+  local cmd = table.concat(args, ' ')
+  term_open(cmd, use_absolute_path)
+end, {
+  nargs = '+',
+  complete = function(_ArgLead, _CmdLine, _CursorPos)
+    return { '${filepath}', '--abs' }
+  end,
+})
+
+vim.g.disable_autoformat = true
+
 -- Don't show the mode, since it's already in the status line
 vim.opt.showmode = false
 
@@ -368,13 +431,20 @@ require('lazy').setup({
       local builtin = require 'telescope.builtin'
       vim.keymap.set('n', '<leader>sh', builtin.help_tags, { desc = '[S]earch [H]elp' })
       vim.keymap.set('n', '<leader>sk', builtin.keymaps, { desc = '[S]earch [K]eymaps' })
-      vim.keymap.set('n', '<leader>sf', builtin.find_files, { desc = '[S]earch [F]iles' })
+      vim.keymap.set('n', '<C-p>', builtin.find_files, { desc = '[S]earch [F]iles' })
       vim.keymap.set('n', '<leader>ss', builtin.builtin, { desc = '[S]earch [S]elect Telescope' })
       vim.keymap.set('n', '<leader>sw', builtin.grep_string, { desc = '[S]earch current [W]ord' })
       vim.keymap.set('n', '<leader>sg', builtin.live_grep, { desc = '[S]earch by [G]rep' })
       vim.keymap.set('n', '<leader>sd', builtin.diagnostics, { desc = '[S]earch [D]iagnostics' })
       vim.keymap.set('n', '<leader>sr', builtin.resume, { desc = '[S]earch [R]esume' })
       vim.keymap.set('n', '<leader>s.', builtin.oldfiles, { desc = '[S]earch Recent Files ("." for repeat)' })
+      vim.keymap.set('n', '<leader>sa', function()
+        builtin.find_files {
+          hidden = true,
+          no_ignore = true,
+          prompt_title = 'All Files (including node_modules)',
+        }
+      end, { desc = '[S]earch [A]ll files (including node_modules)' })
       vim.keymap.set('n', '<leader><leader>', builtin.buffers, { desc = '[ ] Find existing buffers' })
 
       -- Slightly advanced example of overriding default behavior and theme
@@ -462,6 +532,23 @@ require('lazy').setup({
       --    That is to say, every time a new file is opened that is associated with
       --    an lsp (for example, opening `main.rs` is associated with `rust_analyzer`) this
       --    function will be executed to configure the current buffer
+      vim.api.nvim_create_user_command('FormatDisable', function(args)
+        if args.bang then
+          -- FormatDisable! will disable formatting just for this buffer
+          vim.b.disable_autoformat = true
+        else
+          vim.g.disable_autoformat = true
+        end
+      end, {
+        desc = 'Disable autoformat-on-save',
+        bang = true,
+      })
+      vim.api.nvim_create_user_command('FormatEnable', function()
+        vim.b.disable_autoformat = false
+        vim.g.disable_autoformat = false
+      end, {
+        desc = 'Re-enable autoformat-on-save',
+      })
       vim.api.nvim_create_autocmd('LspAttach', {
         group = vim.api.nvim_create_augroup('kickstart-lsp-attach', { clear = true }),
         callback = function(event)
@@ -649,6 +736,9 @@ require('lazy').setup({
         -- Disable "format_on_save lsp_fallback" for languages that don't
         -- have a well standardized coding style. You can add additional
         -- languages here or re-enable it for the disabled ones.
+        if vim.g.disable_autoformat or vim.b[bufnr].disable_autoformat then
+          return
+        end
         local disable_filetypes = { c = true, cpp = true }
         return {
           timeout_ms = 500,
@@ -722,9 +812,9 @@ require('lazy').setup({
         -- No, but seriously. Please read `:help ins-completion`, it is really good!
         mapping = cmp.mapping.preset.insert {
           -- Select the [n]ext item
-          ['<C-n>'] = cmp.mapping.select_next_item(),
+          ['<Down>'] = cmp.mapping.select_next_item(),
           -- Select the [p]revious item
-          ['<C-p>'] = cmp.mapping.select_prev_item(),
+          ['<Up>'] = cmp.mapping.select_prev_item(),
 
           -- Scroll the documentation window [b]ack / [f]orward
           ['<C-b>'] = cmp.mapping.scroll_docs(-4),
