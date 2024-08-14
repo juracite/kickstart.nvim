@@ -108,9 +108,7 @@ vim.opt.number = true
 vim.opt.mouse = 'a'
 
 vim.opt.termguicolors = true
-
 vim.opt.shell = '/bin/bash'
-
 vim.opt.shellcmdflag = '-c'
 vim.opt.shellquote = ''
 vim.opt.shellxquote = ''
@@ -153,7 +151,7 @@ end
 vim.api.nvim_create_user_command('TermOpen', function(opts)
   local args = opts.fargs
   local use_absolute_path = false
-
+    
   if args[1] == '--abs' then
     use_absolute_path = true
     table.remove(args, 1)
