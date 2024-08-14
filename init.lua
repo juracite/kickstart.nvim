@@ -107,20 +107,12 @@ vim.opt.number = true
 -- Enable mouse mode, can be useful for resizing splits for example!
 vim.opt.mouse = 'a'
 
--- Placez ce code dans votre fichier init.lua
-
--- Activer la prise en charge des couleurs 24 bits
 vim.opt.termguicolors = true
-
--- S'assurer que Neovim utilise un shell compatible avec les couleurs
 vim.opt.shell = '/bin/bash'
-
--- Configurer la sortie des commandes externes
 vim.opt.shellcmdflag = '-c'
 vim.opt.shellquote = ''
 vim.opt.shellxquote = ''
 
--- Fonction pour exécuter npm test avec préservation des couleurs
 vim.cmd [[
 function! NpmTestWithColors()
     let cmd = 'npm run test'
@@ -133,7 +125,6 @@ endfunction
 command! NpmTestWithColors call NpmTestWithColors()
 ]]
 
--- Configurer la coloration syntaxique pour les buffers de terminal
 vim.cmd [[
 augroup TerminalColors
     autocmd!
@@ -141,9 +132,7 @@ augroup TerminalColors
 augroup END
 ]]
 
--- Fonction pour ouvrir un terminal avec une commande spécifique
 local function term_open(cmd, use_absolute_path)
--- Remplacer ${filepath} par le chemin du fichier actuel
   local file_path
   if use_absolute_path then
     file_path = vim.fn.expand '%:p'
@@ -159,13 +148,10 @@ local function term_open(cmd, use_absolute_path)
   vim.cmd 'startinsert'
 end
 
--- Création de la commande utilisateur
--- Disable auto format
 vim.api.nvim_create_user_command('TermOpen', function(opts)
   local args = opts.fargs
   local use_absolute_path = false
-
-  -- Vérifier si l'option --abs est présente
+    
   if args[1] == '--abs' then
     use_absolute_path = true
     table.remove(args, 1)
@@ -175,8 +161,7 @@ vim.api.nvim_create_user_command('TermOpen', function(opts)
   term_open(cmd, use_absolute_path)
 end, {
   nargs = '+',
-  complete = function(ArgLead, CmdLine, CursorPos)
-    -- Offrir ${filepath} et --abs comme options de complétion
+  complete = function(_ArgLead, _CmdLine, _CursorPos)
     return { '${filepath}', '--abs' }
   end,
 })
